@@ -1,0 +1,180 @@
+/* General body styling */
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+.app {
+  text-align: center;
+}
+
+/* Navbar styling */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #ffffff;
+  padding: 10px 30px; /* Increased the padding to add space on the left and right */
+  margin: 0 20px; /* Added margin to the left and right sides */
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  transition: background-color 0.3s ease;
+}
+
+/* Left section of the navbar */
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Decreased the gap from 15px to 10px */
+}
+
+/* Navbar buttons */
+.navbar-left button {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #333;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+/* Button hover effect */
+.navbar-left button:hover {
+  color: #007bff;
+}
+
+/* Search bar styling */
+.navbar-center .search-bar {
+  padding: 5px 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  width: 250px;
+}
+
+/* Right section of the navbar (Cart and User Profile Icon) */
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: relative; /* Ensures dropdown is positioned correctly */
+}
+
+/* Icon styling */
+.icon {
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+/* Icon hover effect */
+.icon:hover {
+  color: #007bff;
+}
+
+/* User profile dropdown styling */
+.dropdown-menu {
+  position: absolute;
+  top: 30px; /* Adjust the position below the user icon */
+  right: 0;
+  background-color: #fff;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 10px;
+  width: 120px;
+  box-sizing: border-box;
+  z-index: 10;
+  display: none; /* Hidden by default */
+}
+
+/* Dropdown item styling */
+.dropdown-item {
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+}
+
+/* Dropdown item hover effect */
+.dropdown-item:hover {
+  background-color: #f1f1f1;
+}
+
+/* Show the dropdown when it's toggled */
+.navbar-right .user-profile.open .dropdown-menu {
+  display: block;
+}
+
+/* Hero section with background image */
+.hero {
+  background: url('../assets/bg-home.jpeg') no-repeat center center/cover;
+  height: 80vh;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+.hero h1 {
+  font-size: 3rem;
+}
+
+.hero p {
+  font-size: 1.2rem;
+  margin: 10px 0;
+}
+
+.hero .start-shopping {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* Scroll effect content */
+.scroll-effect {
+  padding: 50px;
+  background-color: #f9f9f9;
+  margin-top: 20px;
+}
+
+.scroll-effect h2 {
+  font-size: 2rem;
+  margin: 0;
+}
+
+/* Media query for responsiveness */
+@media (max-width: 768px) {
+  .navbar {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 10px;
+  }
+
+  .navbar-left,
+  .navbar-right {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .navbar-center {
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .navbar-left button,
+  .navbar-right .icon {
+    font-size: 18px;
+  }
+
+  .navbar-center .search-bar {
+    width: 100%;
+  }
+}
