@@ -6,18 +6,14 @@ const useStore = create((set) => ({
   isLoading: false,
   error: null,
 
-  // Fetch cart from Firestore or localStorage using userId
-  fetchCart: async (userId) => {
-    if (!userId) {
-      set({ error: "userId is required" });
-      return;
-    }
-
+  // Fetch cart from Firestore using cookie auth
+  fetchCart: async () => {
     set({ isLoading: true, error: null });
 
     try {
-      const response = await axios.get(`https://shopxpress-backend-production.up.railway.app/api/cart/userId/${userId}`);
-      console.log("Cart data fetched from backend:", response.data);
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/cart`, {
+        withCredentials: true,
+      });
 
       localStorage.setItem("cart", JSON.stringify(response.data.items || []));
       set({ cart: response.data.items || [] });
@@ -28,24 +24,17 @@ const useStore = create((set) => ({
     }
   },
 
-  // Add item to the cart using userId and productId
-  addToCart: async (productId, userId) => {
-    if (!userId) {
-      set({ error: "userId is required" });
-      return;
-    }
-
+  // Add item to the cart
+  addToCart: async (productId) => {
     set({ isLoading: true, error: null });
 
     try {
-      console.log("Adding item to cart:", { productId, userId });
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/cart/add`,
+        { productId },
+        { withCredentials: true }
+      );
 
-      const response = await axios.post("https://shopxpress-backend-production.up.railway.app/api/cart/add", {
-        userId: userId, // Send userId as userId
-        productId,
-      });
-
-      console.log("Item added to cart:", response.data);
       localStorage.setItem("cart", JSON.stringify(response.data.items));
       set({ cart: response.data.items });
     } catch (error) {
@@ -55,24 +44,17 @@ const useStore = create((set) => ({
     }
   },
 
-  // Remove item from cart using userId and productId
-  removeFromCart: async (productId, userId) => {
-    if (!userId) {
-      set({ error: "userId is required" });
-      return;
-    }
-
+  // Remove item from cart
+  removeFromCart: async (productId) => {
     set({ isLoading: true, error: null });
 
     try {
-      console.log("Removing item from cart:", { productId, userId });
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/cart/remove`,
+        { productId },
+        { withCredentials: true }
+      );
 
-      const response = await axios.post("https://shopxpress-backend-production.up.railway.app/api/cart/remove", {
-        userId: userId, // Send userId as userId
-        productId,
-      });
-
-      console.log("Item removed from cart:", response.data);
       const updatedItems = response.data.items || [];
 
       localStorage.setItem("cart", JSON.stringify(updatedItems));
@@ -84,23 +66,17 @@ const useStore = create((set) => ({
     }
   },
 
-  // Clear the entire cart using user userId
-  clearCart: async (email) => {
-    if (!email) {
-      set({ error: "email is required" });
-      return;
-    }
-
+  // Clear the entire cart
+  clearCart: async () => {
     set({ isLoading: true, error: null });
 
     try {
-      console.log("Clearing cart for user:", email);
+      await axios.post(
+        `${process.env.REACT_APP_API_URL}/cart/clear`,
+        {},
+        { withCredentials: true }
+      );
 
-      const response = await axios.post("https://shopxpress-backend-production.up.railway.app/api/cart/clear", {
-        email,
-      });
-
-      console.log("Cart cleared:", response.data);
       localStorage.setItem("cart", JSON.stringify([]));
       set({ cart: [] });
     } catch (error) {

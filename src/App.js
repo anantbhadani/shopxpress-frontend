@@ -1,19 +1,25 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Link } from "react-router-dom";
+import { BrowserRouter as Router, Link, useLocation } from "react-router-dom";
 import { FaHome, FaBox, FaShoppingCart } from "react-icons/fa";
 import styled from "styled-components";
+import axios from "axios";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "./firebase";
 import "./styles/app.css";
 import "./styles/pullToRefresh.css"; // Import the CSS for animation
 import UserProfile from "./pages/Profile";
 import useStore from "./store/useStore";
 import AppRouter from "./AppRouter";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 // Styled Components for Navbar
 const Navbar = styled.header`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #24292e;
+  background-color: ${props => props.$isScrolled ? 'rgba(36, 41, 46, 0.5)' : '#24292e'};
+  backdrop-filter: ${props => props.$isScrolled ? 'blur(10px)' : 'none'};
+  transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
   padding: 12px 20px;
   color: white;
   position: fixed;
@@ -43,20 +49,6 @@ const NavbarLeft = styled.div`
   }
 `;
 
-const NavbarCenter = styled.div`
-  flex-grow: 1;
-  display: flex;
-  justify-content: center;
-`;
-
-const SearchBar = styled.input`
-  padding: 8px 12px;
-  width: 300px;
-  border-radius: 5px;
-  border: 1px solid #ccc;
-  outline: none;
-  font-size: 14px;
-`;
 
 const NavbarRight = styled.div`
   display: flex;
@@ -81,26 +73,93 @@ const CartIconContainer = styled(Link)`
   }
 `;
 
+// Navbar component that checks if we're on admin route or if user is admin
+const NavbarWrapper = ({ isAuthenticated, cart, handleLogout }) => {
+  const location = useLocation();
+  const userRole = localStorage.getItem("userRole");
+  const [isScrolled, setIsScrolled] = React.useState(false);
+
+  // Handle scroll event to make navbar transparent
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      setIsScrolled(scrollPosition > 50); // Start transparency after 50px scroll
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+  
+  // Don't show user navbar on admin routes (admin-login, admin dashboard)
+  if (location.pathname.startsWith("/admin")) {
+    return null;
+  }
+  
+  // Don't show navbar if user is admin (admins should only use admin interface)
+  // This prevents admin from seeing Home, Products, Cart navigation
+  if (userRole === "admin") {
+    return null;
+  }
+
+  // Only show navbar for authenticated regular users (not admins)
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  // Show navbar only for regular authenticated users
+  return (
+    <Navbar $isScrolled={isScrolled}>
+      <NavbarLeft>
+        <Link to="/">
+          <FaHome size={24} /> Home
+        </Link>
+        <Link to="/products">
+          <FaBox size={24} /> Products
+        </Link>
+      </NavbarLeft>
+      <NavbarRight>
+        <CartIconContainer to="/cart">
+          <FaShoppingCart size={24} />
+          {cart.length > 0 && <span className="cart-count">{cart.length}</span>}
+        </CartIconContainer>
+        <UserProfile isLoggedIn={isAuthenticated} onLogout={handleLogout} />
+      </NavbarRight>
+    </Navbar>
+  );
+};
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true); // Track auth initialization
   const cart = useStore((state) => state.cart);
 
   // Check authentication status on component mount
   useEffect(() => {
-    const storedAuth = localStorage.getItem("isAuthenticated") === "true";
-    setIsAuthenticated(storedAuth);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const token = await user.getIdToken();
+        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        setIsAuthenticated(true);
+        localStorage.setItem("isAuthenticated", "true");
+      } else {
+        delete axios.defaults.headers.common["Authorization"];
+        setIsAuthenticated(false);
+        localStorage.removeItem("isAuthenticated");
+      }
+      setAuthLoading(false); // Auth state determined
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // Handle login and logout
   function handleLogin() {
-    localStorage.setItem("isAuthenticated", "true");
-    setIsAuthenticated(true);
+    // Handled by onAuthStateChanged
   }
 
   function handleLogout() {
-    localStorage.removeItem("isAuthenticated");
-    setIsAuthenticated(false);
+    auth.signOut();
   }
 
   // Pull to Refresh Logic
@@ -151,32 +210,21 @@ function App() {
           </div>
         )}
 
-        {/* Navbar */}
-        {isAuthenticated && (
-          <Navbar>
-            <NavbarLeft>
-              <Link to="/">
-                <FaHome size={24} /> Home
-              </Link>
-              <Link to="/products">
-                <FaBox size={24} /> Products
-              </Link>
-            </NavbarLeft>
-            <NavbarCenter>
-              <SearchBar type="text" placeholder="Search..." />
-            </NavbarCenter>
-            <NavbarRight>
-              <CartIconContainer to="/cart">
-                <FaShoppingCart size={24} />
-                {cart.length > 0 && <span className="cart-count">{cart.length}</span>}
-              </CartIconContainer>
-              <UserProfile isLoggedIn={isAuthenticated} onLogout={handleLogout} />
-            </NavbarRight>
-          </Navbar>
-        )}
+        {/* Navbar - Only shown for regular users, not on admin routes */}
+        <NavbarWrapper 
+          isAuthenticated={isAuthenticated} 
+          cart={cart} 
+          handleLogout={handleLogout} 
+        />
 
         {/* Router */}
-        <AppRouter isAuthenticated={isAuthenticated} handleLogin={handleLogin} />
+        <ErrorBoundary>
+          <AppRouter 
+            isAuthenticated={isAuthenticated} 
+            handleLogin={handleLogin}
+            authLoading={authLoading}
+          />
+        </ErrorBoundary>
       </div>
     </Router>
   );

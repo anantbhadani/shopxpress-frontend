@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import useStore from "../store/useStore"; // Zustand store
 import { AuthContext } from "../context/AuthContext"; // Authentication context
 import {
@@ -14,12 +15,17 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  CircularProgress,
+  Box,
 } from "@mui/material";
-import { Add, Remove, Delete } from "@mui/icons-material";
+import { Add, Remove, Delete, Login } from "@mui/icons-material";
 import { toast } from "react-toastify"; // Import toast for notifications
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "../firebase";
 
 const Cart = () => {
-  const { isAuthenticated, userId } = useContext(AuthContext); // Get authentication status and userId
+  const navigate = useNavigate();
+  const { userId } = useContext(AuthContext); // Get userId
   const {
     cart,
     fetchCart,
@@ -32,19 +38,56 @@ const Cart = () => {
 
   const [openClearDialog, setOpenClearDialog] = useState(false);
   const [localError, setLocalError] = useState(error); // Local state for error handling
+  const [initialLoading, setInitialLoading] = useState(true); // Track initial load
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
+
+  // Check Firebase authentication
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setIsAuthenticated(!!firebaseUser);
+      if (!firebaseUser && cart.length > 0) {
+        // Show login dialog if user has items in cart but is not authenticated
+        setShowLoginDialog(true);
+      }
+    });
+    return () => unsubscribe();
+  }, [cart.length]);
 
   // Fetch cart when component mounts
   useEffect(() => {
-    if (isAuthenticated && userId) {
-      const localCart = localStorage.getItem("cart");
-      if (localCart) {
-        useStore.setState({ cart: JSON.parse(localCart) });
-      } else {
-        fetchCart(userId).catch((err) => setLocalError("Failed to load cart"));
+    const loadCartData = async () => {
+      setInitialLoading(true);
+      try {
+        // Check Firebase auth first
+        const firebaseUser = auth.currentUser;
+        if (firebaseUser) {
+          const localCart = localStorage.getItem("cart");
+          if (localCart) {
+            useStore.setState({ cart: JSON.parse(localCart) });
+          } else {
+            await fetchCart(userId);
+          }
+        } else {
+          // If not authenticated, load from localStorage only
+          const localCart = localStorage.getItem("cart");
+          if (localCart) {
+            const parsedCart = JSON.parse(localCart);
+            useStore.setState({ cart: parsedCart });
+            // Show login dialog if cart has items
+            if (parsedCart.length > 0) {
+              setShowLoginDialog(true);
+            }
+          }
+        }
+      } catch (err) {
+        setLocalError("Failed to load cart");
+      } finally {
+        setInitialLoading(false);
       }
-    } else {
-      setLocalError("User is not authenticated.");
-    }
+    };
+
+    loadCartData();
   }, [isAuthenticated, userId, fetchCart]);
 
   // Store cart in localStorage whenever it updates
@@ -56,7 +99,7 @@ const Cart = () => {
 
   const handleAddItem = (productId) => {
     if (isAuthenticated && userId) {
-      addToCart(productId, userId);
+      addToCart(productId);
     } else {
       setLocalError("User is not authenticated.");
     }
@@ -64,7 +107,7 @@ const Cart = () => {
 
   const handleRemoveItem = (productId) => {
     if (isAuthenticated && userId) {
-      removeFromCart(productId, userId); // Trigger removeFromCart with userId (email) and productId
+      removeFromCart(productId); // Trigger removeFromCart
     } else {
       setLocalError("User is not authenticated.");
     }
@@ -73,12 +116,12 @@ const Cart = () => {
   const handleClearCart = async () => {
     if (isAuthenticated && userId) {
       setLocalError(null); // Reset previous errors (if any)
-      
+
       // Set loading state directly from Zustand
       // useStore.setState({ isLoading: true }); // Set isLoading to true for progress indication
 
       try {
-        await clearCart(userId); // Call the Zustand action to clear the cart
+        await clearCart(); // Call the Zustand action to clear the cart
         setOpenClearDialog(false); // Close the confirmation dialog
         toast.success("Cart cleared successfully!"); // Show success message
       } catch (error) {
@@ -101,14 +144,62 @@ const Cart = () => {
   const tax = subtotal * 0.1; // Assume 10% sales tax
   const grandTotal = subtotal + tax;
 
-  return (
-    <div style={{ padding: "20px", maxWidth: "900px", margin: "auto" }}>
-      <Typography variant="h4" align="center" gutterBottom>
-        Your Cart ({cart.length} items)
-      </Typography>
+  // Login Dialog
+  const handleLoginDialogClose = () => {
+    setShowLoginDialog(false);
+  };
 
-      {isLoading ? (
-        <Typography align="center">Loading...</Typography>
+  const handleLogin = () => {
+    setShowLoginDialog(false);
+    navigate("/");
+  };
+
+  return (
+    <>
+      {/* Login Dialog */}
+      <Dialog open={showLoginDialog} onClose={handleLoginDialogClose}>
+        <DialogTitle>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Login color="primary" />
+            <Typography variant="h6">Login Required</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            You need to be logged in to view and manage your cart.
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Your cart items will be saved and available after you log in.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleLoginDialogClose} color="secondary">
+            Continue Shopping
+          </Button>
+          <Button onClick={handleLogin} variant="contained" color="primary" startIcon={<Login />}>
+            Login
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <div style={{ padding: "20px", maxWidth: "900px", margin: "auto", marginTop: "80px" }}>
+        <Typography variant="h4" align="center" gutterBottom>
+          Your Cart ({cart.length} items)
+        </Typography>
+
+      {initialLoading || isLoading ? (
+        <Box
+          display="flex"
+          flexDirection="column"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="400px"
+        >
+          <CircularProgress size={60} />
+          <Typography variant="body1" style={{ marginTop: 20 }}>
+            Loading your cart...
+          </Typography>
+        </Box>
       ) : localError ? (
         <Typography align="center" color="error">
           {localError}
@@ -187,7 +278,12 @@ const Cart = () => {
           {/* Checkout & Clear Cart Buttons */}
           <Grid container spacing={2} justifyContent="flex-end">
             <Grid item>
-              <Button variant="contained" color="primary" size="large">
+              <Button 
+                variant="contained" 
+                color="primary" 
+                size="large"
+                onClick={() => navigate("/checkout")}
+              >
                 Checkout
               </Button>
             </Grid>
@@ -220,7 +316,8 @@ const Cart = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </div>
+      </div>
+    </>
   );
 };
 

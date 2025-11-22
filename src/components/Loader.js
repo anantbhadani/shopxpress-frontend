@@ -1,12 +1,21 @@
 import React from "react";
+import { Box, CircularProgress, Typography } from "@mui/material";
 
 const Loader = () => {
   return (
-    <div className="d-flex justify-content-center align-items-center" style={{ height: "100vh" }}>
-      <div className="spinner-border text-primary" role="status">
-        <span className="visually-hidden">Loading...</span>
-      </div>
-    </div>
+    <Box
+      display="flex"
+      flexDirection="column"
+      justifyContent="center"
+      alignItems="center"
+      minHeight="100vh"
+      bgcolor="#f5f5f5"
+    >
+      <CircularProgress size={60} thickness={4} />
+      <Typography variant="body1" style={{ marginTop: 20, color: "#666" }}>
+        Loading...
+      </Typography>
+    </Box>
   );
 };
 
