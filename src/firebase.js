@@ -2,17 +2,22 @@ import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 
-// Your web app's Firebase configuration
+// Firebase configuration from environment variables
 const firebaseConfig = {
-    apiKey: "AIzaSyBCYXeXC_ZTf_cssFKCqY0yMn-_fukLPh8",
-    authDomain: "server-19d74.firebaseapp.com",
-    databaseURL: "https://server-19d74-default-rtdb.firebaseio.com",
-    projectId: "server-19d74",
-    storageBucket: "server-19d74.firebasestorage.app",
-    messagingSenderId: "392175592720",
-    appId: "1:392175592720:web:d1030a805feff1fc363195",
-    measurementId: "G-0DYGR19PLK"
+    apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+    authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+    databaseURL: process.env.REACT_APP_FIREBASE_DATABASE_URL,
+    projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.REACT_APP_FIREBASE_APP_ID,
+    measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
+
+// Validate that all required Firebase config values are present
+if (!firebaseConfig.apiKey || !firebaseConfig.authDomain || !firebaseConfig.projectId) {
+    console.error("Firebase configuration is missing. Please check your .env file.");
+}
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
